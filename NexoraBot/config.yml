@@ -17,15 +17,15 @@
 # ═══════════════════════════════════════════════════════════════════
 
 bot:
-  token: "MTUwOTE2OTY1MDk1OTkwODk3NQ.GvTzsU.pbM97FPbjRb82CqmWnlZ_-TDbf4jowIPYnPzCs"          # Your Discord bot token  ← REQUIRED
-  clientId: "1509169650959908975"       # Your bot's application/client ID  ← REQUIRED
-  guildId: "1499783027432230945"        # Your main server ID (for instant command deploy)  ← RECOMMENDED
+  token: ""          # Your Discord bot token  ← REQUIRED
+  clientId: ""       # Your bot's application/client ID  ← REQUIRED
+  guildId: ""        # Your main server ID (for instant command deploy)  ← RECOMMENDED
 
 database:
-  mongoUri: "mongodb+srv://razorbot:razor123@cluster0.1krbh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"       # MongoDB connection string  ← REQUIRED
+  mongoUri: ""       # MongoDB connection string  ← REQUIRED
 
 developer:
-  id: "1445100757928902768"             # Your Discord user ID (grants full bot access)
+  id: ""             # Your Discord user ID (grants full bot access)
 
 api:
   enabled: true
