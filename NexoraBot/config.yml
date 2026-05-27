@@ -1,0 +1,33 @@
+# ═══════════════════════════════════════════════════════════════════
+#   NEXORA BOT — config.yml
+#
+#   Only GLOBAL settings live here.
+#   Per-server settings (tickets, reviews, branding) are configured
+#   directly in Discord using slash commands:
+#
+#     /setup tickets logs         — set transcript channel
+#     /setup tickets category     — set Discord ticket category
+#     /setup tickets addrole      — add support roles
+#     /setup tickets options      — set limits, DM transcript, etc.
+#     /setup reviews channel      — set review posting channel
+#     /setup reviews adminrole    — set review admin roles
+#     /setup branding set         — name, color, footer
+#     /createticket               — add ticket categories to the panel
+#     /ticketpanel                — send the panel to a channel
+# ═══════════════════════════════════════════════════════════════════
+
+bot:
+  token: ""          # Your Discord bot token  ← REQUIRED
+  clientId: ""       # Your bot's application/client ID  ← REQUIRED
+  guildId: ""        # Your main server ID (for instant command deploy)  ← RECOMMENDED
+
+database:
+  mongoUri: ""       # MongoDB connection string  ← REQUIRED
+
+developer:
+  id: ""             # Your Discord user ID (grants full bot access)
+
+api:
+  enabled: true
+  port: 8888
+  host: "0.0.0.0"
