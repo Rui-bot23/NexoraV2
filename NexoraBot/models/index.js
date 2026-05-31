@@ -103,7 +103,18 @@ const reviewBlacklistSchema = new Schema({
   createdAt: { type: Number, default: () => Date.now() },
 });
 
-// ── Guild Config (all setup done via slash commands, stored here) ─────────────
+// ── Ticket Category ──────────────────────────────────────────────────────────
+const ticketCategorySchema = new Schema({
+  guildId:     { type: String, required: true },
+  categoryId:  { type: String, required: true, unique: true },
+  name:        { type: String, required: true },
+  description: { type: String, default: "Open a support ticket" },
+  emoji:       { type: String, default: "🎫" },
+  prefix:      { type: String, required: true },
+  teamPingId:  { type: String, default: null },
+  createdAt:   { type: Number, default: () => Date.now() },
+});
+
 // ── GuildConfig ──────────────────────────────────────────────────────────────
 const guildConfigSchema = new Schema({
   guildId: { type: String, required: true, unique: true },
@@ -135,15 +146,15 @@ const guildConfigSchema = new Schema({
   redeemTestMode: { type: Boolean, default: false },
 });
 
-const GuildConfig = model("NexoraGuildConfig", guildConfigSchema);
+const GuildConfig = require("mongoose").models.NexoraGuildConfig || require("mongoose").models.NexoraGuildConfig || model("NexoraGuildConfig", guildConfigSchema);
 
 module.exports = {
-  License:         model("NexoraLicense",         licenseSchema),
+  License:         require("mongoose").models.NexoraLicense || model("NexoraLicense", licenseSchema),
   GuildConfig,
-  Product:         model("NexoraProduct",         productSchema),
-  Blacklist:       model("NexoraBlacklist",        blacklistSchema),
-  Ticket:          model("NexoraTicket",           ticketSchema),
-  Review:          model("NexoraReview",           reviewSchema),
-  ReviewBlacklist: model("NexoraReviewBlacklist",  reviewBlacklistSchema),
-  TicketCategory:  model("NexoraTicketCategory",   ticketCategorySchema),
+  Product:         require("mongoose").models.NexoraProduct || model("NexoraProduct", productSchema),
+  Blacklist:       require("mongoose").models.NexoraBlacklist || model("NexoraBlacklist", blacklistSchema),
+  Ticket:          require("mongoose").models.NexoraTicket || model("NexoraTicket", ticketSchema),
+  Review:          require("mongoose").models.NexoraReview || model("NexoraReview", reviewSchema),
+  ReviewBlacklist: require("mongoose").models.NexoraReviewBlacklist || model("NexoraReviewBlacklist", reviewBlacklistSchema),
+  TicketCategory:  require("mongoose").models.NexoraTicketCategory || model("NexoraTicketCategory", ticketCategorySchema),
 };
