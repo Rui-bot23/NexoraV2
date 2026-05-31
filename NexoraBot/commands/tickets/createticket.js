@@ -148,69 +148,90 @@ const panelData = new SlashCommandBuilder()
   );
 
 async function executePanel(interaction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: 64 });
 
   const guildId  = interaction.guild.id;
   const target   = interaction.options.getChannel("channel") || interaction.channel;
   const guildCfg = await getGuildConfig(guildId);
   const cats     = await TicketCategory.find({ guildId }).sort({ createdAt: 1 });
+  const {
+    ContainerBuilder, TextDisplayBuilder, SeparatorBuilder,
+    MediaGalleryBuilder, MediaGalleryItemBuilder, UnfurledMediaItemBuilder,
+    ActionRowBuilder: AR, StringSelectMenuBuilder: SSM, MessageFlags: MF2,
+  } = require("discord.js");
 
-  const brandName = guildCfg.brandName || "Nexora";
-  const color     = hex(guildCfg.brandColor || "5865F2");
+  const panelTitle  = guildCfg.ticketPanelTitle  || "Nexora - Tickets";
+  const beforeText  = guildCfg.ticketPanelBefore || "Think about your request in advance and describe it clearly and concisely. The more precise your information, the faster and more efficiently we can help you.";
+  const whyUsText   = guildCfg.ticketPanelWhyUs  || "Fast, reliable support without detours. Clear processes, high quality and a team that delivers instead of just promising.";
 
-  const embed = new EmbedBuilder()
-    .setColor(color)
-    .setTitle(`${brandName} • SUPPORT TICKET SYSTEM`)
-    .setDescription(
-      `Hast du ein Problem oder eine Frage? Erstelle einfach ein Support-Ticket!\n\n` +
-      `**Wie funktioniert es?**\n` +
-      `• Wähle eine Kategorie aus dem Dropdown unten\n` +
-      `• Gib dein Name und deinen Grund an\n` +
-      `• Unser Support-Team wird sich schnellstmöglich um dich kümmern!\n\n` +
-      `**Verfügbare Kategorien:** ${cats.length}`
-    )
-    .setFooter({ text: guildCfg.brandFooter || "Nexora Support", iconURL: guildCfg.brandIcon || undefined })
-    .setTimestamp();
+  const container = new ContainerBuilder();
 
-  if (guildCfg.brandIcon) embed.setThumbnail(guildCfg.brandIcon);
-
-  // Build dropdown
-  let components = [];
-  if (cats.length > 0) {
-    const options = cats.map(c => ({
-      label: c.name,
-      description: c.description.slice(0, 100),
-      value: `nexora_open_${c.categoryId}`,
-      emoji: c.emoji,
-    }));
-
-    const row = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId("nexora_ticket_category")
-        .setPlaceholder("🎫  Wähle eine Ticket-Kategorie...")
-        .addOptions(options)
+  // Banner
+  if (guildCfg.welcomeBannerUrl) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder()
+          .setMedia(new UnfurledMediaItemBuilder().setURL(guildCfg.welcomeBannerUrl))
+      )
     );
-    components = [row];
-  } else {
-    embed.setDescription(embed.data.description + "\n\n> ⚠️ No ticket categories configured yet. Use `/createticket` to add some.");
   }
 
-  await target.send({ embeds: [embed], components });
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`## 🎫 ${panelTitle}`)
+  );
 
-  return interaction.editReply({
-    embeds: [successEmbed("Panel Sent", `Ticket panel has been sent to ${target}.\n\nTip: **${cats.length}** categor${cats.length === 1 ? "y" : "ies"} shown.`)],
-  });
+  container.addSeparatorComponents(new SeparatorBuilder());
+
+  // Before opening
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `- **Before Opening a Ticket** 🎟️
+> ${beforeText}`
+    )
+  );
+
+  container.addSeparatorComponents(new SeparatorBuilder());
+
+  // Why us
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `- **Why Us?** 🌐
+> ${whyUsText}`
+    )
+  );
+
+  container.addSeparatorComponents(new SeparatorBuilder());
+
+  // Categories list
+  const catLines = cats.length > 0
+    ? cats.map(cat => `  - ${cat.emoji} ${cat.name}`).join("\n")
+    : "  - *(No categories yet — use /createticket)*";
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`- **Categories** 🗒️\n${catLines}`)
+  );
+
+  const msgComponents = [container];
+
+  if (cats.length > 0) {
+    const row = new AR().addComponents(
+      new SSM()
+        .setCustomId("nexora_ticket_category")
+        .setPlaceholder("Wähle eine Kategorie um dein Ticket zu erstellen...")
+        .addOptions(cats.map(cat => ({
+          label: cat.name,
+          description: cat.description.slice(0, 100),
+          value: `nexora_open_${cat.categoryId}`,
+          emoji: cat.emoji,
+        })))
+    );
+    msgComponents.push(row);
+  }
+
+  await target.send({ components: msgComponents, flags: MF2.IsComponentsV2 });
+  return interaction.editReply({ content: `✅ Ticket panel sent to ${target}. (${cats.length} categories)` });
 }
 
-// ── Autocomplete handler (for /deleteticket name) ─────────────────────────────
-async function autocomplete(interaction) {
-  const focused = interaction.options.getFocused().toLowerCase();
-  const cats = await TicketCategory.find({ guildId: interaction.guild.id }).limit(25);
-  const filtered = cats
-    .filter(c => c.name.toLowerCase().includes(focused))
-    .map(c => ({ name: `${c.emoji} ${c.name}`, value: c.name }));
-  await interaction.respond(filtered);
-}
 
 module.exports = {
   // createticket
