@@ -34,7 +34,7 @@ const data = new SlashCommandBuilder()
   .addSubcommand(sub =>
     sub.setName("info")
       .setDescription("View a product's details")
-      .addStringOption(o => o.setName("name").setDescription("Product name").setRequired(true))
+      .addStringOption(o => o.setName("name").setDescription("Product name").setRequired(true).setAutocomplete(true))
   )
   .addSubcommand(sub =>
     sub.setName("list")
@@ -43,12 +43,12 @@ const data = new SlashCommandBuilder()
   .addSubcommand(sub =>
     sub.setName("delete")
       .setDescription("Delete a product (and all its licenses)")
-      .addStringOption(o => o.setName("name").setDescription("Product name").setRequired(true))
+      .addStringOption(o => o.setName("name").setDescription("Product name").setRequired(true).setAutocomplete(true))
   )
   .addSubcommand(sub =>
     sub.setName("edit")
       .setDescription("Edit a product's details")
-      .addStringOption(o => o.setName("name").setDescription("Current product name").setRequired(true))
+      .addStringOption(o => o.setName("name").setDescription("Current product name").setRequired(true).setAutocomplete(true))
       .addStringOption(o => o.setName("new_name").setDescription("New product name"))
       .addStringOption(o => o.setName("description").setDescription("New description"))
       .addStringOption(o => o.setName("version").setDescription("New version"))
@@ -81,7 +81,8 @@ async function handleCreate(interaction) {
   const version = interaction.options.getString("version");
   const price   = interaction.options.getString("price") || "Free";
 
-  const existing = await Product.findOne({ productName: new RegExp(`^${name}$`, "i") });
+  const safeName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existing = await Product.findOne({ productName: new RegExp(`^${safeName}$`, "i") });
   if (existing) {
     return interaction.editReply({ embeds: [errorEmbed("Already Exists", `A product named **${name}** already exists.`)] });
   }
@@ -111,7 +112,8 @@ async function handleCreate(interaction) {
 
 async function handleInfo(interaction) {
   const name = interaction.options.getString("name");
-  const product = await Product.findOne({ productName: new RegExp(`^${name}$`, "i") });
+  const safeName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const product = await Product.findOne({ productName: new RegExp(`^${safeName}$`, "i") });
   if (!product) {
     return interaction.editReply({ embeds: [errorEmbed("Not Found", `No product named **${name}** was found.`)] });
   }
@@ -152,7 +154,8 @@ async function handleList(interaction) {
 
 async function handleDelete(interaction) {
   const name = interaction.options.getString("name");
-  const product = await Product.findOneAndDelete({ productName: new RegExp(`^${name}$`, "i") });
+  const safeName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const product = await Product.findOneAndDelete({ productName: new RegExp(`^${safeName}$`, "i") });
   if (!product) {
     return interaction.editReply({ embeds: [errorEmbed("Not Found", `No product named **${name}** was found.`)] });
   }
@@ -173,7 +176,8 @@ async function handleEdit(interaction) {
   const version  = interaction.options.getString("version");
   const price    = interaction.options.getString("price");
 
-  const product = await Product.findOne({ productName: new RegExp(`^${name}$`, "i") });
+  const safeName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const product = await Product.findOne({ productName: new RegExp(`^${safeName}$`, "i") });
   if (!product) {
     return interaction.editReply({ embeds: [errorEmbed("Not Found", `No product named **${name}** was found.`)] });
   }
@@ -189,4 +193,14 @@ async function handleEdit(interaction) {
   });
 }
 
-module.exports = { data, execute };
+async function autocomplete(interaction) {
+  const focused = interaction.options.getFocused().toLowerCase();
+  const products = await Product.find().limit(25);
+  await interaction.respond(
+    products
+      .filter(p => p.productName.toLowerCase().includes(focused))
+      .map(p => ({ name: p.productName, value: p.productName }))
+  );
+}
+
+module.exports = { data, execute, autocomplete };
