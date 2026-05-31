@@ -29,6 +29,11 @@ const licenseSchema = new Schema({
   hwidArray:     { type: Array, default: [] },
   attempts:      { type: Number, default: 0 },       // failed validation attempts
 
+  // Redeem system
+  redeemEnabled: { type: Boolean, default: false },  // admin enables redeem for this key
+  redeemedBy:    { type: String, default: null },     // Discord user ID who redeemed
+  redeemedAt:    { type: Number, default: null },
+
   // Metadata
   totalRequests: { type: Number, default: 0 },
   createdAt:     { type: Number, default: () => Date.now() },
@@ -99,55 +104,46 @@ const reviewBlacklistSchema = new Schema({
 });
 
 // ── Guild Config (all setup done via slash commands, stored here) ─────────────
+// ── GuildConfig ──────────────────────────────────────────────────────────────
 const guildConfigSchema = new Schema({
   guildId: { type: String, required: true, unique: true },
 
-  // Branding
-  brandName:   { type: String, default: "Nexora" },
-  brandColor:  { type: String, default: "5865F2" },
-  brandFooter: { type: String, default: "Nexora Support" },
-  brandIcon:   { type: String, default: null },
+  // Welcome
+  welcomeChannelId:    { type: String, default: null },
+  welcomeBannerUrl:    { type: String, default: null },
+  welcomeTitle:        { type: String, default: "Welcome to Nexora" },
+  welcomeDescription:  { type: String, default: "Hey {user}, welcome to **Nexora**!" },
+  welcomeVerifyChannelId:  { type: String, default: null },
+  welcomeTicketChannelId:  { type: String, default: null },
+  welcomeVerifyLabel:  { type: String, default: "Verify" },
+  welcomeTicketLabel:  { type: String, default: "Ticket System" },
+  welcomeVerifyUrl:    { type: String, default: null },
+  welcomeTicketUrl:    { type: String, default: null },
 
   // Tickets
   ticketLogChannelId:    { type: String, default: null },
-  ticketCategoryId:      { type: String, default: null },  // Discord category channel
+  ticketCategoryId:      { type: String, default: null },
   ticketSupportRoleIds:  { type: [String], default: [] },
   ticketMaxPerUser:      { type: Number, default: 1 },
   ticketDmTranscript:    { type: Boolean, default: true },
   ticketCloseDelay:      { type: Number, default: 5 },
-  ticketRatingsEnabled:  { type: Boolean, default: true },
+  ticketPanelTitle:      { type: String, default: "Nexora - Tickets" },
+  ticketPanelBefore:     { type: String, default: "Think about your request in advance and describe it clearly and concisely. The more precise your information, the faster and more efficiently we can help you." },
+  ticketPanelWhyUs:      { type: String, default: "Fast, reliable support without detours. Clear processes, high quality and a team that delivers instead of just promising." },
 
-  // Reviews
-  reviewChannelId:  { type: String, default: null },
-  reviewLogChannelId: { type: String, default: null },
-  reviewAdminRoleIds: { type: [String], default: [] },
-  reviewAllowImages:  { type: Boolean, default: true },
-  reviewMaxLength:    { type: Number, default: 500 },
-  reviewCooldown:     { type: Number, default: 60 },
-
-  // Licensing API
-  apiEnabled: { type: Boolean, default: true },
+  // Redeem test mode (disables license validation for testing)
+  redeemTestMode: { type: Boolean, default: false },
 });
 
-// ── Ticket Category (created via /createticket, stored per guild) ─────────────
-const ticketCategorySchema = new Schema({
-  guildId:     { type: String, required: true },
-  categoryId:  { type: String, required: true, unique: true }, // internal uuid
-  name:        { type: String, required: true },
-  description: { type: String, default: "Open a support ticket" },
-  emoji:       { type: String, default: "🎫" },
-  prefix:      { type: String, required: true },
-  teamPingId:  { type: String, default: null },  // role or @everyone id
-  createdAt:   { type: Number, default: () => Date.now() },
-});
+const GuildConfig = model("NexoraGuildConfig", guildConfigSchema);
 
 module.exports = {
   License:         model("NexoraLicense",         licenseSchema),
+  GuildConfig,
   Product:         model("NexoraProduct",         productSchema),
   Blacklist:       model("NexoraBlacklist",        blacklistSchema),
   Ticket:          model("NexoraTicket",           ticketSchema),
   Review:          model("NexoraReview",           reviewSchema),
   ReviewBlacklist: model("NexoraReviewBlacklist",  reviewBlacklistSchema),
-  GuildConfig:     model("NexoraGuildConfig",      guildConfigSchema),
   TicketCategory:  model("NexoraTicketCategory",   ticketCategorySchema),
 };
