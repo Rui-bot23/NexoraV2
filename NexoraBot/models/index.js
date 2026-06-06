@@ -115,6 +115,64 @@ const ticketCategorySchema = new Schema({
   createdAt:   { type: Number, default: () => Date.now() },
 });
 
+// ── Vouch ────────────────────────────────────────────────────────────────────
+const vouchSchema = new Schema({
+  vouchId:    { type: String, required: true, unique: true },
+  guildId:    { type: String, required: true },
+  sellerId:   { type: String, required: true },
+  buyerId:    { type: String, required: true },
+  buyerTag:   { type: String, required: true },
+  product:    { type: String, default: null },
+  price:      { type: String, default: null },
+  rating:     { type: Number, required: true, min: 1, max: 5 }, // 1-5 stars
+  note:       { type: String, default: "" },
+  imageUrl:   { type: String, default: null },
+  messageId:  { type: String, default: null },
+  createdAt:  { type: Number, default: () => Date.now() },
+  removed:    { type: Boolean, default: false },
+  removedBy:  { type: String, default: null },
+  removedReason: { type: String, default: null },
+});
+
+// ── Giveaway ──────────────────────────────────────────────────────────────────
+const giveawaySchema = new Schema({
+  giveawayId:    { type: String, required: true, unique: true },
+  guildId:       { type: String, required: true },
+  channelId:     { type: String, required: true },
+  messageId:     { type: String, default: null },
+  prize:         { type: String, required: true },
+  description:   { type: String, default: "" },
+  hostedBy:      { type: String, required: true },
+  winnerCount:   { type: Number, default: 1 },
+  participants:  { type: [String], default: [] },
+  winners:       { type: [String], default: [] },
+  endsAt:        { type: Number, required: true },
+  ended:         { type: Boolean, default: false },
+  paused:        { type: Boolean, default: false },
+  pausedAt:      { type: Number, default: null },
+  remainingMs:   { type: Number, default: null },
+  // Requirements (Winnsy-inspired)
+  requiredRoles:    { type: [String], default: [] },
+  minAccountDays:   { type: Number, default: 0 },
+  nitroBoosterOnly: { type: Boolean, default: false },
+  // Multipliers: roleId:weight stored as "roleId:3"
+  roleMultipliers:  { type: [String], default: [] },
+  createdAt:     { type: Number, default: () => Date.now() },
+});
+
+// ── Account ──────────────────────────────────────────────────────────────────
+const accountSchema = new S2({
+  discordId:    { type: String, required: true, unique: true },
+  discordTag:   { type: String, required: true },
+  email:        { type: String, required: true, unique: true },
+  passwordHash: { type: String, required: true },
+  licenseKey:   { type: String, required: true },
+  productName:  { type: String, default: "" },
+  createdAt:    { type: Number, default: () => Date.now() },
+  lastLogin:    { type: Number, default: null },
+  downloadToken:{ type: String, default: null },
+});
+
 // ── GuildConfig ──────────────────────────────────────────────────────────────
 const guildConfigSchema = new Schema({
   guildId: { type: String, required: true, unique: true },
@@ -132,6 +190,10 @@ const guildConfigSchema = new Schema({
   welcomeTicketUrl:    { type: String, default: null },
 
   // Tickets
+  vouchChannelId:        { type: String, default: null },
+  vouchLogChannelId:     { type: String, default: null },
+  giveawayLogChannelId:  { type: String, default: null },
+  giveawayManagerRoleId: { type: String, default: null },
   ticketLogChannelId:    { type: String, default: null },
   ticketCategoryId:      { type: String, default: null },
   ticketSupportRoleIds:  { type: [String], default: [] },
@@ -147,6 +209,9 @@ const guildConfigSchema = new Schema({
 });
 
 const GuildConfig = require("mongoose").models.NexoraGuildConfig || require("mongoose").models.NexoraGuildConfig || model("NexoraGuildConfig", guildConfigSchema);
+
+const Vouch    = require("mongoose").models.NexoraVouch    || model("NexoraVouch",    vouchSchema);
+const Giveaway = require("mongoose").models.NexoraGiveaway || model("NexoraGiveaway", giveawaySchema);
 
 module.exports = {
   License:         require("mongoose").models.NexoraLicense || model("NexoraLicense", licenseSchema),
