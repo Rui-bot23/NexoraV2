@@ -233,6 +233,16 @@ async function executePanel(interaction) {
 }
 
 
+async function autocomplete(interaction) {
+  const focused = interaction.options.getFocused().toLowerCase();
+  const { TicketCategory } = require("../../models");
+  const cats = await TicketCategory.find({ guildId: interaction.guild.id }).limit(25);
+  await interaction.respond(
+    cats.filter(c => c.name.toLowerCase().includes(focused))
+       .map(c => ({ name: `${c.emoji} ${c.name}`, value: c.name }))
+  );
+}
+
 module.exports = {
   // createticket
   data:    createData,
