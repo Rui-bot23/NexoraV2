@@ -44,7 +44,9 @@ async function execute(interaction, client) {
   // ── Slash Commands ──────────────────────────────────────────────────────────
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
-    if (!command) return;
+    if (!command) {
+      return interaction.reply({ content: "❌ Command not found.", flags: 64 }).catch(() => {});
+    }
     try {
       await command.execute(interaction);
     } catch (err) {
