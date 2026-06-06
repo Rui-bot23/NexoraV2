@@ -26,6 +26,14 @@ async function execute(interaction, client) {
 
   // ── Autocomplete ────────────────────────────────────────────────────────────
   if (interaction.isAutocomplete()) {
+    const cmd = client.commands?.get(interaction.commandName);
+    if (cmd?.autocomplete) await cmd.autocomplete(interaction).catch(console.error);
+    return;
+  }
+
+
+  // ── Autocomplete ────────────────────────────────────────────────────────────
+  if (interaction.isAutocomplete()) {
     const command = client.commands.get(interaction.commandName);
     if (command?.autocomplete) {
       try { await command.autocomplete(interaction); } catch (err) { console.error(err); }
@@ -293,6 +301,12 @@ async function execute(interaction, client) {
   if (interaction.isButton() && interaction.customId.startsWith("nexora_wizard_")) {
     const { handleWizardButton } = require("../commands/admin/setupwizard");
     return handleWizardButton(interaction);
+  }
+
+  // ── Button — Giveaway ──────────────────────────────────────────────────────
+  if (interaction.isButton() && interaction.customId.startsWith("nexora_giveaway_")) {
+    const { handleGiveawayButton } = require("../commands/giveaway/giveaway");
+    return handleGiveawayButton(interaction).catch(console.error);
   }
 
   // ── Button — Review Delete ──────────────────────────────────────────────────
