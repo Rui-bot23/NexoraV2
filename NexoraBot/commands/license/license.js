@@ -60,7 +60,7 @@ const data = new SlashCommandBuilder()
 
   .addSubcommand(s => s.setName("create")
     .setDescription("Create a single license key")
-    .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
+    .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true).setAutocomplete(true))
     .addStringOption(o => o.setName("duration").setDescription("30d | 6m | 1y | lifetime").setRequired(true))
     .addStringOption(o => o.setName("description").setDescription("Optional description"))
     .addIntegerOption(o => o.setName("max_ip").setDescription("Max IPs (default: 1)").setMinValue(1).setMaxValue(10))
@@ -69,7 +69,7 @@ const data = new SlashCommandBuilder()
 
   .addSubcommand(s => s.setName("batch")
     .setDescription("Create multiple license keys at once")
-    .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
+    .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true).setAutocomplete(true))
     .addStringOption(o => o.setName("duration").setDescription("30d | 6m | 1y | lifetime").setRequired(true))
     .addIntegerOption(o => o.setName("count").setDescription("How many keys to generate (1-50)").setRequired(true).setMinValue(1).setMaxValue(50))
     .addIntegerOption(o => o.setName("max_ip").setDescription("Max IPs per key (default: 1)").setMinValue(1).setMaxValue(10))
@@ -134,17 +134,33 @@ const data = new SlashCommandBuilder()
 
 // ── Autocomplete ──────────────────────────────────────────────────────────────
 async function autocomplete(interaction) {
-  const focused = interaction.options.getFocused().toUpperCase();
-  const licenses = await License.find(
-    focused ? { licenseKey: new RegExp(focused, "i") } : {}
-  ).limit(25);
+  const focused  = interaction.options.getFocused();
+  const fieldName = interaction.options.getFocused(true).name;
 
-  await interaction.respond(
-    licenses.map(l => ({
-      name: `${l.licenseKey} — ${l.productName} (${statusBadge(l)})`,
-      value: l.licenseKey,
-    }))
-  );
+  try {
+    // Product field → suggest product names
+    if (fieldName === "product") {
+      const products = await Product.find(
+        focused ? { productName: new RegExp(focused, "i") } : {}
+      ).limit(25);
+      return await interaction.respond(
+        products.map(p => ({ name: p.productName, value: p.productName }))
+      );
+    }
+
+    // Key field → suggest license keys
+    const licenses = await License.find(
+      focused ? { licenseKey: new RegExp(focused.toUpperCase(), "i") } : {}
+    ).limit(25);
+    return await interaction.respond(
+      licenses.map(l => ({
+        name: `${l.licenseKey} — ${l.productName} (${statusBadge(l)})`,
+        value: l.licenseKey,
+      }))
+    );
+  } catch {
+    await interaction.respond([]).catch(() => {});
+  }
 }
 
 // ── Execute ───────────────────────────────────────────────────────────────────
