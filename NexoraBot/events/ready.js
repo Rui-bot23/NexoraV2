@@ -4,6 +4,10 @@ const { ActivityType } = require("discord.js");
 const once = true;
 
 async function execute(client) {
+  // Restore persistent giveaways from DB
+  const { restoreGiveaways } = require("../commands/giveaway/giveaway");
+  await restoreGiveaways(client);
+
   const cfg = client.config;
   const b = cfg.branding || {};
   const bot = cfg.bot || {};
