@@ -1,114 +1,225 @@
 /**
- * ╔═══════════════════════════════════════════════╗
- * ║           NEXORA BOT — index.js               ║
- * ║   Licensing · Tickets · Reviews · Admin       ║
- * ╚═══════════════════════════════════════════════╝
+ * Nexora — Mongoose Models
  */
 
-require("dotenv").config();
-const { Client, GatewayIntentBits, Collection, Partials } = require("discord.js");
-const fs = require("fs");
-const path = require("path");
-const mongoose = require("mongoose");
-const chalk = require("chalk");
-const { loadConfig } = require("./utils/config");
-const { startApiServer } = require("./utils/api");
+const { model, Schema } = require("mongoose");
 
-const config = loadConfig();
+// ── License ──────────────────────────────────────────────────────────────────
+const licenseSchema = new Schema({
+  licenseKey:    { type: String, required: true, unique: true },
+  productName:   { type: String, required: true },
+  description:   { type: String, default: "" },
+  permanent:     { type: Boolean, default: false },
+  expiresAt:     { type: Number, default: 0 },       // 0 = never
+  suspended:     { type: Boolean, default: false },
+  reset:         { type: Boolean, default: false },
 
-// ── Discord Client ──────────────────────────────────────────────────────────
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages,
-  ],
-  partials: [Partials.Channel],
+  // Usage tracking
+  isUsed:        { type: Boolean, default: false },
+  usedAt:        { type: Number, default: 0 },
+  profile:       { type: Array, default: [] },       // bound user profiles
+  authorization: { type: String, default: "null" },
+
+  // IP / HWID
+  maxIp:         { type: Number, default: 1 },
+  maxHwId:       { type: Number, default: 1 },
+  latestIp:      { type: String, default: null },
+  latestHwId:    { type: String, default: null },
+  ipArray:       { type: Array, default: [] },
+  hwidArray:     { type: Array, default: [] },
+  attempts:      { type: Number, default: 0 },       // failed validation attempts
+
+  // Redeem system
+  redeemEnabled: { type: Boolean, default: false },  // admin enables redeem for this key
+  redeemedBy:    { type: String, default: null },     // Discord user ID who redeemed
+  redeemedAt:    { type: Number, default: null },
+
+  // Metadata
+  totalRequests: { type: Number, default: 0 },
+  createdAt:     { type: Number, default: () => Date.now() },
+  editedAt:      { type: Number, default: 0 },
+  createdBy:     { type: String, default: null },    // Discord user ID
 });
 
-client.commands = new Collection();
-client.config = config;
-
-// ── Load Commands ───────────────────────────────────────────────────────────
-function registerCmd(cmd) {
-  if (cmd?.data && cmd?.execute) client.commands.set(cmd.data.name, cmd);
-}
-
-function loadCommands(dir) {
-  const files = fs.readdirSync(dir, { withFileTypes: true });
-  for (const file of files) {
-    const fullPath = path.join(dir, file.name);
-    if (file.isDirectory()) {
-      loadCommands(fullPath);
-    } else if (file.name.endsWith(".js")) {
-      try {
-        const mod = require(fullPath);
-        registerCmd(mod);
-        // Support files that export multiple commands (e.g. deleteTicket, ticketPanel)
-        for (const key of Object.keys(mod)) {
-          if (key !== "data" && key !== "execute" && typeof mod[key] === "object") {
-            registerCmd(mod[key]);
-          }
-        }
-      } catch (err) {
-        console.error(chalk.red(`[CMD] Failed to load ${fullPath}:`), err.message);
-      }
-    }
-  }
-}
-loadCommands(path.join(__dirname, "commands"));
-
-// ── Load Events ─────────────────────────────────────────────────────────────
-function loadEvents(dir) {
-  if (!fs.existsSync(dir)) return;
-  const files = fs.readdirSync(dir).filter(f => f.endsWith(".js"));
-  for (const file of files) {
-    const event = require(path.join(dir, file));
-    const eventName = file.replace(".js", "");
-    if (event.once) {
-      client.once(eventName, (...args) => event.execute(...args, client));
-    } else {
-      client.on(eventName, (...args) => event.execute(...args, client));
-    }
-  }
-}
-loadEvents(path.join(__dirname, "events"));
-
-// ── MongoDB ──────────────────────────────────────────────────────────────────
-async function connectDB() {
-  const uri = process.env.MONGO_URI || config.database.mongoUri;
-  if (!uri) {
-    console.error(chalk.red("[DB] No MongoDB URI provided. Set database.mongoUri in config.yml"));
-    process.exit(1);
-  }
-  try {
-    await mongoose.connect(uri);
-    console.log(chalk.green("[DB] Connected to MongoDB"));
-  } catch (err) {
-    console.error(chalk.red("[DB] MongoDB connection failed:"), err.message);
-    process.exit(1);
-  }
-}
-
-// ── Boot ─────────────────────────────────────────────────────────────────────
-(async () => {
-  await connectDB();
-
-  if (config.api?.enabled) {
-    await startApiServer(client, config);
-  }
-
-  const token = process.env.DISCORD_TOKEN || config.bot.token;
-  if (!token) {
-    console.error(chalk.red("[BOT] No bot token provided. Set bot.token in config.yml"));
-    process.exit(1);
-  }
-
-  await client.login(token);
-})();
-
-process.on("unhandledRejection", (err) => {
-  console.error(chalk.red("[ERROR] Unhandled rejection:"), err);
+// ── Product ──────────────────────────────────────────────────────────────────
+const productSchema = new Schema({
+  productId:      { type: String, required: true, unique: true },
+  productName:    { type: String, required: true },
+  description:    { type: String, default: "" },
+  version:        { type: String, default: "1.0.0" },
+  price:          { type: String, default: "Free" },
+  totalPurchases: { type: Number, default: 0 },
+  createdAt:      { type: String, default: () => new Date().toISOString() },
+  createdBy:      { type: String, default: null },
 });
+
+// ── Blacklist ─────────────────────────────────────────────────────────────────
+const blacklistSchema = new Schema({
+  type:      { type: String, required: true },   // "user" | "ip" | "hwid"
+  value:     { type: String, required: true },
+  reason:    { type: String, default: "No reason provided" },
+  createdAt: { type: String, default: () => new Date().toISOString() },
+  createdBy: { type: String, default: null },
+});
+
+// ── Ticket ────────────────────────────────────────────────────────────────────
+const ticketSchema = new Schema({
+  ticketId:    { type: String, required: true, unique: true },
+  channelId:   { type: String, required: true },
+  guildId:     { type: String, required: true },
+  ownerId:     { type: String, required: true },
+  ownerTag:    { type: String, required: true },
+  category:    { type: String, default: "General Support" },
+  subject:     { type: String, default: "" },
+  description: { type: String, default: "" },
+  priority:    { type: String, default: "Normal" },   // Low | Normal | High | Critical
+  status:      { type: String, default: "open" },     // open | closed
+  claimedBy:   { type: String, default: null },
+  rating:      { type: Number, default: null },
+  createdAt:   { type: Number, default: () => Date.now() },
+  closedAt:    { type: Number, default: null },
+});
+
+// ── Review ────────────────────────────────────────────────────────────────────
+const reviewSchema = new Schema({
+  reviewId:   { type: String, required: true, unique: true },
+  guildId:    { type: String, required: true },
+  userId:     { type: String, required: true },
+  userTag:    { type: String, required: true },
+  userAvatar: { type: String, default: null },
+  rating:     { type: Number, required: true, min: 1, max: 5 },
+  content:    { type: String, required: true },
+  imageUrl:   { type: String, default: null },
+  messageId:  { type: String, default: null },
+  createdAt:  { type: Number, default: () => Date.now() },
+  edited:     { type: Boolean, default: false },
+});
+
+// ── Review Blacklist (separate, JSON-based cooldown stored in memory) ─────────
+const reviewBlacklistSchema = new Schema({
+  userId:    { type: String, required: true, unique: true },
+  reason:    { type: String, default: "No reason provided" },
+  createdBy: { type: String, default: null },
+  createdAt: { type: Number, default: () => Date.now() },
+});
+
+// ── Ticket Category ──────────────────────────────────────────────────────────
+const ticketCategorySchema = new Schema({
+  guildId:     { type: String, required: true },
+  categoryId:  { type: String, required: true, unique: true },
+  name:        { type: String, required: true },
+  description: { type: String, default: "Open a support ticket" },
+  emoji:       { type: String, default: "🎫" },
+  prefix:      { type: String, required: true },
+  teamPingId:  { type: String, default: null },
+  createdAt:   { type: Number, default: () => Date.now() },
+});
+
+// ── Vouch ────────────────────────────────────────────────────────────────────
+const vouchSchema = new Schema({
+  vouchId:    { type: String, required: true, unique: true },
+  guildId:    { type: String, required: true },
+  sellerId:   { type: String, required: true },
+  buyerId:    { type: String, required: true },
+  buyerTag:   { type: String, required: true },
+  product:    { type: String, default: null },
+  price:      { type: String, default: null },
+  rating:     { type: Number, required: true, min: 1, max: 5 }, // 1-5 stars
+  note:       { type: String, default: "" },
+  imageUrl:   { type: String, default: null },
+  messageId:  { type: String, default: null },
+  createdAt:  { type: Number, default: () => Date.now() },
+  removed:    { type: Boolean, default: false },
+  removedBy:  { type: String, default: null },
+  removedReason: { type: String, default: null },
+});
+
+// ── Giveaway ──────────────────────────────────────────────────────────────────
+const giveawaySchema = new Schema({
+  giveawayId:    { type: String, required: true, unique: true },
+  guildId:       { type: String, required: true },
+  channelId:     { type: String, required: true },
+  messageId:     { type: String, default: null },
+  prize:         { type: String, required: true },
+  description:   { type: String, default: "" },
+  hostedBy:      { type: String, required: true },
+  winnerCount:   { type: Number, default: 1 },
+  participants:  { type: [String], default: [] },
+  winners:       { type: [String], default: [] },
+  endsAt:        { type: Number, required: true },
+  ended:         { type: Boolean, default: false },
+  paused:        { type: Boolean, default: false },
+  pausedAt:      { type: Number, default: null },
+  remainingMs:   { type: Number, default: null },
+  // Requirements (Winnsy-inspired)
+  requiredRoles:    { type: [String], default: [] },
+  minAccountDays:   { type: Number, default: 0 },
+  nitroBoosterOnly: { type: Boolean, default: false },
+  // Multipliers: roleId:weight stored as "roleId:3"
+  roleMultipliers:  { type: [String], default: [] },
+  createdAt:     { type: Number, default: () => Date.now() },
+});
+
+// ── Account ──────────────────────────────────────────────────────────────────
+const accountSchema = new Schema({
+  discordId:    { type: String, required: true, unique: true },
+  discordTag:   { type: String, required: true },
+  email:        { type: String, required: true, unique: true },
+  passwordHash: { type: String, required: true },
+  licenseKey:   { type: String, required: true },
+  productName:  { type: String, default: "" },
+  createdAt:    { type: Number, default: () => Date.now() },
+  lastLogin:    { type: Number, default: null },
+  downloadToken:{ type: String, default: null },
+});
+
+// ── GuildConfig ──────────────────────────────────────────────────────────────
+const guildConfigSchema = new Schema({
+  guildId: { type: String, required: true, unique: true },
+
+  // Welcome
+  welcomeChannelId:    { type: String, default: null },
+  welcomeBannerUrl:    { type: String, default: null },
+  welcomeTitle:        { type: String, default: "Welcome to Nexora" },
+  welcomeDescription:  { type: String, default: "Hey {user}, welcome to **Nexora**!" },
+  welcomeVerifyChannelId:  { type: String, default: null },
+  welcomeTicketChannelId:  { type: String, default: null },
+  welcomeVerifyLabel:  { type: String, default: "Verify" },
+  welcomeTicketLabel:  { type: String, default: "Ticket System" },
+  welcomeVerifyUrl:    { type: String, default: null },
+  welcomeTicketUrl:    { type: String, default: null },
+
+  // Tickets
+  vouchChannelId:        { type: String, default: null },
+  vouchLogChannelId:     { type: String, default: null },
+  giveawayLogChannelId:  { type: String, default: null },
+  giveawayManagerRoleId: { type: String, default: null },
+  ticketLogChannelId:    { type: String, default: null },
+  ticketCategoryId:      { type: String, default: null },
+  ticketSupportRoleIds:  { type: [String], default: [] },
+  ticketMaxPerUser:      { type: Number, default: 1 },
+  ticketDmTranscript:    { type: Boolean, default: true },
+  ticketCloseDelay:      { type: Number, default: 5 },
+  ticketPanelTitle:      { type: String, default: "Nexora - Tickets" },
+  ticketPanelBefore:     { type: String, default: "Think about your request in advance and describe it clearly and concisely. The more precise your information, the faster and more efficiently we can help you." },
+  ticketPanelWhyUs:      { type: String, default: "Fast, reliable support without detours. Clear processes, high quality and a team that delivers instead of just promising." },
+
+  // Redeem test mode (disables license validation for testing)
+  redeemTestMode: { type: Boolean, default: false },
+});
+
+const GuildConfig = require("mongoose").models.NexoraGuildConfig || require("mongoose").models.NexoraGuildConfig || model("NexoraGuildConfig", guildConfigSchema);
+
+const Vouch    = require("mongoose").models.NexoraVouch    || model("NexoraVouch",    vouchSchema);
+const Giveaway = require("mongoose").models.NexoraGiveaway || model("NexoraGiveaway", giveawaySchema);
+
+module.exports = {
+  License:         require("mongoose").models.NexoraLicense || model("NexoraLicense", licenseSchema),
+  GuildConfig,
+  Product:         require("mongoose").models.NexoraProduct || model("NexoraProduct", productSchema),
+  Blacklist:       require("mongoose").models.NexoraBlacklist || model("NexoraBlacklist", blacklistSchema),
+  Ticket:          require("mongoose").models.NexoraTicket || model("NexoraTicket", ticketSchema),
+  Review:          require("mongoose").models.NexoraReview || model("NexoraReview", reviewSchema),
+  ReviewBlacklist: require("mongoose").models.NexoraReviewBlacklist || model("NexoraReviewBlacklist", reviewBlacklistSchema),
+  TicketCategory:  require("mongoose").models.NexoraTicketCategory || model("NexoraTicketCategory", ticketCategorySchema),
+};
